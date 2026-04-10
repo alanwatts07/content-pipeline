@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Pipeline</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --pink: #f778ba;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  header h1 span { color: var(--accent); }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    display: inline-block;
+  }
+  .status-dot.offline { background: var(--red); }
+  .refresh-info { font-size: 12px; color: var(--text-dim); }
+  .btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: var(--border); }
+  .btn-primary { background: #238636; border-color: #2ea043; }
+  .btn-primary:hover { background: #2ea043; }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 24px;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 13px;
+  }
+  .stat { display: flex; align-items: center; gap: 6px; }
+  .stat-num { font-weight: 600; color: var(--accent); font-size: 16px; }
+
+  /* Kanban board */
+  .board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    padding: 16px;
+    min-height: calc(100vh - 110px);
+    overflow-x: auto;
+  }
+
+  /* Columns */
+  .column {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    min-width: 240px;
+  }
+  .col-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+  }
+  .col-header .count {
+    background: var(--border);
+    color: var(--text-dim);
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .col-body {
+    padding: 8px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Column accent colors */
+  .col-goals .col-header { border-top: 3px solid var(--accent); border-radius: 8px 8px 0 0; }
+  .col-tasks .col-header { border-top: 3px solid var(--orange); border-radius: 8px 8px 0 0; }
+  .col-drafts .col-header { border-top: 3px solid var(--purple); border-radius: 8px 8px 0 0; }
+  .col-posted .col-header { border-top: 3px solid var(--green); border-radius: 8px 8px 0 0; }
+  .col-analytics .col-header { border-top: 3px solid var(--pink); border-radius: 8px 8px 0 0; }
+
+  /* Cards */
+  .card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .card-body-preview {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 6px 0;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .badge-active { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .badge-paused { background: rgba(210,153,34,0.15); color: var(--orange); }
+  .badge-completed { background: rgba(63,185,80,0.15); color: var(--green); }
+  .badge-pending { background: rgba(139,148,158,0.15); color: var(--text-dim); }
+  .badge-in_progress, .badge-in-progress { background: rgba(210,153,34,0.15); color: var(--orange); }
+  .badge-done { background: rgba(63,185,80,0.15); color: var(--green); }
+  .badge-draft { background: rgba(188,140,255,0.15); color: var(--purple); }
+  .badge-approved { background: rgba(63,185,80,0.15); color: var(--green); }
+  .badge-rejected { background: rgba(248,81,73,0.15); color: var(--red); }
+  .badge-published { background: rgba(63,185,80,0.15); color: var(--green); }
+
+  .platform-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    background: rgba(88,166,255,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(88,166,255,0.2);
+  }
+
+  /* Analytics card */
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 3px 0;
+  }
+  .metric-label { color: var(--text-dim); }
+  .metric-val { font-weight: 600; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 24px 12px;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    width: 90%;
+    max-width: 560px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 24px;
+  }
+  .modal h2 {
+    font-size: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .modal-field .value {
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .board {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .column { min-width: unset; }
+    .col-body { max-height: 300px; }
+    .stats-bar { flex-wrap: wrap; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>///</span> Content Pipeline</h1>
+  <div class="header-right">
+    <span class="refresh-info" id="refresh-info">Loading...</span>
+    <span class="status-dot" id="status-dot"></span>
+    <button class="btn" onclick="refreshData()">Refresh</button>
+  </div>
+</header>
+
+<div class="stats-bar" id="stats-bar"></div>
+
+<div class="board">
+  <div class="column col-goals">
+    <div class="col-header">Goals <span class="count" id="count-goals">0</span></div>
+    <div class="col-body" id="col-goals"></div>
+  </div>
+  <div class="column col-tasks">
+    <div class="col-header">Tasks <span class="count" id="count-tasks">0</span></div>
+    <div class="col-body" id="col-tasks"></div>
+  </div>
+  <div class="column col-drafts">
+    <div class="col-header">Drafts <span class="count" id="count-drafts">0</span></div>
+    <div class="col-body" id="col-drafts"></div>
+  </div>
+  <div class="column col-posted">
+    <div class="col-header">Posted <span class="count" id="count-posted">0</span></div>
+    <div class="col-body" id="col-posted"></div>
+  </div>
+  <div class="column col-analytics">
+    <div class="col-header">Analytics <span class="count" id="count-analytics">0</span></div>
+    <div class="col-body" id="col-analytics"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+const API = window.location.origin;
+const API_KEY = window.__PIPELINE_KEY__ || '';
+const AUTH_HEADERS = API_KEY ? { 'Authorization': 'Bearer ' + API_KEY } : {};
+let data = { goals: [], tasks: [], drafts: [], posts: [], analytics: {} };
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + (dateStr.includes('Z') ? '' : 'Z'));
+  const now = new Date();
+  const diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  return Math.floor(diff / 86400) + 'd ago';
+}
+
+function statusBadge(status) {
+  const cls = 'badge badge-' + (status || '').replace('_', '-');
+  return `<span class="${cls}">${status || 'unknown'}</span>`;
+}
+
+function platformBadges(platforms) {
+  if (!platforms || !platforms.length) return '';
+  return platforms.map(p => `<span class="platform-badge">${p}</span>`).join(' ');
+}
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Render columns
+function render() {
+  // Goals
+  const goalsEl = document.getElementById('col-goals');
+  document.getElementById('count-goals').textContent = data.goals.length;
+  goalsEl.innerHTML = data.goals.length ? data.goals.map(g => `
+    <div class="card" onclick="showGoal('${g.id}')">
+      <div class="card-title">${escapeHtml(g.title)}</div>
+      <div class="card-meta">
+        ${statusBadge(g.status)}
+        ${platformBadges(g.target_platforms)}
+      </div>
+      <div class="card-meta" style="margin-top:4px">
+        <span>${timeAgo(g.created_at)}</span>
+        ${g.due_date ? `<span>Due: ${g.due_date}</span>` : ''}
+      </div>
+    </div>
+  `).join('') : '<div class="empty-state">No goals yet</div>';
+
+  // Tasks
+  const tasksEl = document.getElementById('col-tasks');
+  document.getElementById('count-tasks').textContent = data.tasks.length;
+  tasksEl.innerHTML = data.tasks.length ? data.tasks.map(t => `
+    <div class="card" onclick="showTask('${t.id}')">
+      <div class="card-title">${escapeHtml(t.title)}</div>
+      <div class="card-meta">
+        ${statusBadge(t.status)}
+        <span class="platform-badge">${t.task_type}</span>
+      </div>
+      <div class="card-meta" style="margin-top:4px">
+        ${t.assigned_to ? `<span>${escapeHtml(t.assigned_to)}</span>` : ''}
+        <span>${timeAgo(t.created_at)}</span>
+      </div>
+    </div>
+  `).join('') : '<div class="empty-state">No tasks</div>';
+
+  // Drafts
+  const draftsEl = document.getElementById('col-drafts');
+  document.getElementById('count-drafts').textContent = data.drafts.length;
+  draftsEl.innerHTML = data.drafts.length ? data.drafts.map(d => `
+    <div class="card" onclick="showDraft('${d.id}')">
+      <div class="card-title">${escapeHtml(d.title)}</div>
+      ${d.excerpt ? `<div class="card-body-preview">${escapeHtml(d.excerpt)}</div>` : ''}
+      <div class="card-meta">
+        ${statusBadge(d.status)}
+        ${platformBadges(d.target_platforms)}
+      </div>
+      <div class="card-meta" style="margin-top:4px">
+        ${d.created_by ? `<span>by ${escapeHtml(d.created_by)}</span>` : ''}
+        <span>${timeAgo(d.created_at)}</span>
+      </div>
+    </div>
+  `).join('') : '<div class="empty-state">No drafts</div>';
+
+  // Posts
+  const postsEl = document.getElementById('col-posted');
+  document.getElementById('count-posted').textContent = data.posts.length;
+  postsEl.innerHTML = data.posts.length ? data.posts.map(p => `
+    <div class="card" onclick="showPost('${p.id}')">
+      <div class="card-title">${escapeHtml(p.platform)}</div>
+      <div class="card-meta">
+        <span class="platform-badge">${p.platform}</span>
+        ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" style="color:var(--accent);font-size:11px" onclick="event.stopPropagation()">View</a>` : ''}
+      </div>
+      <div class="card-meta" style="margin-top:4px">
+        <span>${timeAgo(p.posted_at)}</span>
+      </div>
+    </div>
+  `).join('') : '<div class="empty-state">No posts</div>';
+
+  // Analytics
+  const analyticsEl = document.getElementById('col-analytics');
+  const analyticsEntries = Object.entries(data.analytics);
+  document.getElementById('count-analytics').textContent = analyticsEntries.length;
+  analyticsEl.innerHTML = analyticsEntries.length ? analyticsEntries.map(([postId, a]) => {
+    const post = data.posts.find(p => p.id === postId);
+    return `
+    <div class="card">
+      <div class="card-title">${post ? escapeHtml(post.platform) : postId.slice(0,8)}</div>
+      <div class="metric-row"><span class="metric-label">Likes</span><span class="metric-val">${a.likes || 0}</span></div>
+      <div class="metric-row"><span class="metric-label">Comments</span><span class="metric-val">${a.comments || 0}</span></div>
+      <div class="metric-row"><span class="metric-label">Shares</span><span class="metric-val">${a.shares || 0}</span></div>
+      <div class="metric-row"><span class="metric-label">Impressions</span><span class="metric-val">${a.impressions || 0}</span></div>
+      <div class="metric-row"><span class="metric-label">Reach</span><span class="metric-val">${a.reach || 0}</span></div>
+      <div class="card-meta" style="margin-top:6px"><span>${timeAgo(a.checked_at)}</span></div>
+    </div>`;
+  }).join('') : '<div class="empty-state">No analytics yet</div>';
+
+  // Stats bar
+  const totalEngagement = analyticsEntries.reduce((sum, [,a]) =>
+    sum + (a.likes||0) + (a.comments||0) + (a.shares||0), 0);
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat"><span class="stat-num">${data.goals.length}</span> Goals</div>
+    <div class="stat"><span class="stat-num">${data.tasks.length}</span> Tasks</div>
+    <div class="stat"><span class="stat-num">${data.drafts.length}</span> Drafts</div>
+    <div class="stat"><span class="stat-num">${data.posts.length}</span> Published</div>
+    <div class="stat"><span class="stat-num">${totalEngagement}</span> Engagements</div>
+  `;
+}
+
+// Fetch all data
+async function refreshData() {
+  const dot = document.getElementById('status-dot');
+  const info = document.getElementById('refresh-info');
+  try {
+    const opts = { headers: AUTH_HEADERS };
+    const [goals, tasks, drafts, posts] = await Promise.all([
+      fetch(API + '/api/goals', opts).then(r => r.json()),
+      fetch(API + '/api/tasks', opts).then(r => r.json()),
+      fetch(API + '/api/drafts', opts).then(r => r.json()),
+      fetch(API + '/api/posts', opts).then(r => r.json()),
+    ]);
+    data.goals = goals;
+    data.tasks = tasks;
+    data.drafts = drafts;
+    data.posts = posts;
+
+    // Fetch analytics for each post
+    data.analytics = {};
+    const analyticsPromises = posts.map(p =>
+      fetch(API + '/api/posts/' + p.id + '/analytics', opts)
+        .then(r => r.json())
+        .then(arr => { if (arr.length) data.analytics[p.id] = arr[0]; })
+        .catch(() => {})
+    );
+    await Promise.all(analyticsPromises);
+
+    dot.className = 'status-dot';
+    info.textContent = 'Updated ' + new Date().toLocaleTimeString();
+    render();
+  } catch (e) {
+    dot.className = 'status-dot offline';
+    info.textContent = 'Connection error';
+    console.error(e);
+  }
+}
+
+// Detail modals
+function showGoal(id) {
+  const g = data.goals.find(x => x.id === id);
+  if (!g) return;
+  const relatedTasks = data.tasks.filter(t => t.goal_id === id);
+  const relatedDrafts = data.drafts.filter(d => d.goal_id === id);
+  openModal(`
+    <h2>${escapeHtml(g.title)} <button class="modal-close" onclick="closeModal()">&times;</button></h2>
+    <div class="modal-field"><label>Status</label><div class="value">${statusBadge(g.status)}</div></div>
+    <div class="modal-field"><label>Description</label><div class="value">${escapeHtml(g.description) || 'None'}</div></div>
+    <div class="modal-field"><label>Platforms</label><div class="value">${platformBadges(g.target_platforms) || 'None'}</div></div>
+    <div class="modal-field"><label>Created</label><div class="value">${g.created_at} by ${escapeHtml(g.created_by)}</div></div>
+    ${g.due_date ? `<div class="modal-field"><label>Due</label><div class="value">${g.due_date}</div></div>` : ''}
+    <div class="modal-field"><label>Related Tasks (${relatedTasks.length})</label><div class="value">${relatedTasks.map(t => escapeHtml(t.title) + ' ' + statusBadge(t.status)).join('<br>') || 'None'}</div></div>
+    <div class="modal-field"><label>Related Drafts (${relatedDrafts.length})</label><div class="value">${relatedDrafts.map(d => escapeHtml(d.title) + ' ' + statusBadge(d.status)).join('<br>') || 'None'}</div></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="updateStatus('goals','${id}','paused')">Pause</button>
+      <button class="btn btn-primary" onclick="updateStatus('goals','${id}','completed')">Complete</button>
+    </div>
+  `);
+}
+
+function showTask(id) {
+  const t = data.tasks.find(x => x.id === id);
+  if (!t) return;
+  openModal(`
+    <h2>${escapeHtml(t.title)} <button class="modal-close" onclick="closeModal()">&times;</button></h2>
+    <div class="modal-field"><label>Status</label><div class="value">${statusBadge(t.status)}</div></div>
+    <div class="modal-field"><label>Type</label><div class="value"><span class="platform-badge">${t.task_type}</span></div></div>
+    <div class="modal-field"><label>Description</label><div class="value">${escapeHtml(t.description) || 'None'}</div></div>
+    <div class="modal-field"><label>Assigned To</label><div class="value">${escapeHtml(t.assigned_to) || 'Unassigned'}</div></div>
+    <div class="modal-field"><label>Created</label><div class="value">${t.created_at}</div></div>
+    ${t.completed_at ? `<div class="modal-field"><label>Completed</label><div class="value">${t.completed_at}</div></div>` : ''}
+    <div class="modal-actions">
+      <button class="btn" onclick="updateStatus('tasks','${id}','in_progress')">Start</button>
+      <button class="btn btn-primary" onclick="updateStatus('tasks','${id}','done')">Done</button>
+      <button class="btn" onclick="updateStatus('tasks','${id}','cancelled')">Cancel</button>
+    </div>
+  `);
+}
+
+function showDraft(id) {
+  const d = data.drafts.find(x => x.id === id);
+  if (!d) return;
+  openModal(`
+    <h2>${escapeHtml(d.title)} <button class="modal-close" onclick="closeModal()">&times;</button></h2>
+    <div class="modal-field"><label>Status</label><div class="value">${statusBadge(d.status)}</div></div>
+    <div class="modal-field"><label>Platforms</label><div class="value">${platformBadges(d.target_platforms) || 'None'}</div></div>
+    <div class="modal-field"><label>Excerpt</label><div class="value">${escapeHtml(d.excerpt) || 'None'}</div></div>
+    <div class="modal-field"><label>Body</label><div class="value" style="max-height:200px;overflow-y:auto;background:var(--bg);padding:10px;border-radius:6px;font-size:13px">${escapeHtml(d.body)}</div></div>
+    <div class="modal-field"><label>Created</label><div class="value">${d.created_at}${d.created_by ? ' by ' + escapeHtml(d.created_by) : ''}</div></div>
+    ${d.approved_at ? `<div class="modal-field"><label>Approved</label><div class="value">${d.approved_at}</div></div>` : ''}
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="updateStatus('drafts','${id}','approved')">Approve</button>
+      <button class="btn" onclick="updateStatus('drafts','${id}','rejected')">Reject</button>
+      ${d.status === 'approved' ? `<button class="btn btn-primary" onclick="publishDraft('${id}')">Publish</button>` : ''}
+    </div>
+  `);
+}
+
+function showPost(id) {
+  const p = data.posts.find(x => x.id === id);
+  if (!p) return;
+  const a = data.analytics[id];
+  openModal(`
+    <h2>${escapeHtml(p.platform)} Post <button class="modal-close" onclick="closeModal()">&times;</button></h2>
+    <div class="modal-field"><label>Platform</label><div class="value"><span class="platform-badge">${p.platform}</span></div></div>
+    <div class="modal-field"><label>Posted</label><div class="value">${p.posted_at}</div></div>
+    ${p.url ? `<div class="modal-field"><label>URL</label><div class="value"><a href="${escapeHtml(p.url)}" target="_blank" style="color:var(--accent)">${escapeHtml(p.url)}</a></div></div>` : ''}
+    ${a ? `
+    <div class="modal-field"><label>Metrics</label><div class="value">
+      <div class="metric-row"><span class="metric-label">Likes</span><span class="metric-val">${a.likes||0}</span></div>
+      <div class="metric-row"><span class="metric-label">Comments</span><span class="metric-val">${a.comments||0}</span></div>
+      <div class="metric-row"><span class="metric-label">Shares</span><span class="metric-val">${a.shares||0}</span></div>
+      <div class="metric-row"><span class="metric-label">Clicks</span><span class="metric-val">${a.clicks||0}</span></div>
+      <div class="metric-row"><span class="metric-label">Impressions</span><span class="metric-val">${a.impressions||0}</span></div>
+      <div class="metric-row"><span class="metric-label">Reach</span><span class="metric-val">${a.reach||0}</span></div>
+    </div></div>
+    ` : '<div class="modal-field"><label>Metrics</label><div class="value">No analytics data</div></div>'}
+  `);
+}
+
+function openModal(html) {
+  document.getElementById('modal').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.remove('active');
+  }
+}
+
+async function updateStatus(entity, id, status) {
+  try {
+    await fetch(`${API}/api/${entity}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...AUTH_HEADERS },
+      body: JSON.stringify({ status }),
+    });
+    closeModal();
+    refreshData();
+  } catch (e) {
+    console.error(e);
+    alert('Failed to update');
+  }
+}
+
+async function publishDraft(id) {
+  if (!confirm('Publish this draft to all target platforms?')) return;
+  try {
+    const res = await fetch(`${API}/api/drafts/${id}/publish`, { method: 'POST', headers: AUTH_HEADERS });
+    const result = await res.json();
+    alert('Published: ' + result.results.map(r => r.platform + ': ' + (r.success ? 'OK' : r.error)).join('\n'));
+    closeModal();
+    refreshData();
+  } catch (e) {
+    console.error(e);
+    alert('Publish failed');
+  }
+}
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// Init + auto-refresh
+refreshData();
+setInterval(refreshData, 30000);
+</script>
+</body>
+</html>

@@ -19,6 +19,7 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 
 from db import get_db, init_db
 from models import (
@@ -370,6 +371,18 @@ def refresh_analytics(_=Depends(require_auth)):
     db.commit()
     db.close()
     return {"refreshed": refreshed}
+
+
+# ── Dashboard ──
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard():
+    html_path = Path(__file__).parent / "dashboard.html"
+    html = html_path.read_text()
+    # Inject API key so the dashboard can authenticate
+    key_script = f'<script>window.__PIPELINE_KEY__ = "{PIPELINE_API_KEY}";</script>'
+    html = html.replace('<head>', '<head>' + key_script, 1)
+    return html
 
 
 # ── Health ──
