@@ -288,8 +288,13 @@ def publish_draft(draft_id: str, _=Depends(require_auth)):
 
     modules = get_modules()
     results = []
+    blog_urls = []  # Collect blog URLs to append to social posts
 
-    for platform in platforms:
+    # Publish blogs first, then social — so social posts can link to the articles
+    BLOG_PLATFORMS = {"nei_blog", "void_blog"}
+    sorted_platforms = sorted(platforms, key=lambda p: 0 if p in BLOG_PLATFORMS else 1)
+
+    for platform in sorted_platforms:
         module = modules.get(platform)
         if not module:
             results.append({"platform": platform, "success": False, "error": f"Module '{platform}' not found or not configured"})
@@ -300,10 +305,17 @@ def publish_draft(draft_id: str, _=Depends(require_auth)):
             results.append({"platform": platform, "success": False, "error": "; ".join(errors)})
             continue
 
+        # For social platforms, append blog article links to the excerpt
+        excerpt = draft_dict.get("excerpt", "")
+        if platform not in BLOG_PLATFORMS and blog_urls:
+            link_text = "\n\n" + "\n".join(blog_urls)
+            excerpt = excerpt + link_text
+
         pub = module.publish(
             title=draft_dict["title"],
             body=draft_dict["body"],
-            excerpt=draft_dict.get("excerpt", ""),
+            excerpt=excerpt,
+            link=blog_urls[0] if blog_urls else "",
         )
 
         if pub.success:
@@ -313,6 +325,9 @@ def publish_draft(draft_id: str, _=Depends(require_auth)):
                 (post_id, draft_id, platform, pub.platform_post_id, pub.url),
             )
             results.append({"platform": platform, "success": True, "post_id": post_id, "url": pub.url})
+            # Collect blog URLs for social posts
+            if platform in BLOG_PLATFORMS and pub.url:
+                blog_urls.append(pub.url)
         else:
             results.append({"platform": platform, "success": False, "error": pub.error})
 
