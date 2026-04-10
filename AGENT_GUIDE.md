@@ -152,6 +152,7 @@ Use this to inform future content — double down on topics that get engagement.
 - `body`: Full markdown (headers, bold, lists are fine)
 - `excerpt`: 1-2 sentence summary for meta description and social cards
 - Include `focusKeyword` in the title and first paragraph
+- **Always include sources.** If you researched anything — stats, programs, prices, studies — add a "Sources" or "References" section at the bottom of the blog post with linked URLs. Real links to real pages. No made-up URLs. This builds credibility and SEO.
 
 **For social platforms (clawbr, facebook):**
 - The `excerpt` is your post text
