@@ -1,0 +1,11 @@
+INFO:     Started server process [80463]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8100 (Press CTRL+C to quit)
+INFO:     127.0.0.1:45774 - "GET /ping HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47766 - "POST /api/goals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47776 - "POST /api/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47782 - "POST /api/drafts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47784 - "GET /api/agent/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63246 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63246 - "GET /openapi.json HTTP/1.1" 200 OK
